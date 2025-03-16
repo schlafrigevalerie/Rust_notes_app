@@ -1,47 +1,35 @@
-mod db;
+use cursive::Cursive;
+use cursive::views::{Dialog, EditView, TextView};
+use cursive::view::Resizable;  // Добавляем импорт для Resizable
+use cursive::CursiveExt;  // Для вызова run
 
-use db::{init_db, add_note, get_notes};
-use std::io::{self, Write};
-use rusqlite::Result;
+fn main() {
+    let mut siv = Cursive::new();
 
-fn main() -> Result<()> {
-    let conn = init_db()?;
+    // Экран для ввода текста
+    siv.add_layer(
+        Dialog::new()
+            .title("Введите заметку")
+            .content(
+                EditView::new()
+                    .on_submit(|siv, text| {
+                        // Когда нажимаем Enter, переходим к экрану с заметкой
+                        siv.add_layer(
+                            Dialog::new()
+                                .title("Ваша заметка")
+                                .content(TextView::new(text))
+                                .button("Назад", |siv| {
+                                    siv.pop_layer();  // Возвращаемся к экрану ввода
+                                }),
+                        );
+                    })
+                    .max_width(20),  // Можно использовать max_width вместо fixed_width
+            )
+            .button("Выход", |siv| {
+                siv.quit();
+            }),
+    );
 
-    loop {
-        println!("Выберите действие: (1) Добавить заметку, (2) Показать заметки, (0) Выйти");
-        print!("> ");
-        io::stdout().flush().unwrap();
-
-        let mut choice = String::new();
-        io::stdin().read_line(&mut choice).unwrap();
-        let choice = choice.trim();
-
-        match choice {
-            "1" => {
-                print!("Название: ");
-                io::stdout().flush().unwrap();
-                let mut title = String::new();
-                io::stdin().read_line(&mut title).unwrap();
-
-                print!("Содержание: ");
-                io::stdout().flush().unwrap();
-                let mut content = String::new();
-                io::stdin().read_line(&mut content).unwrap();
-
-                add_note(&conn, title.trim(), content.trim())?;
-            }
-            "2" => {
-                get_notes(&conn)?;
-            }
-            "0" => {
-                println!("Выход...");
-                break;
-            }
-            _ => {
-                println!("Неверный ввод, попробуйте снова!");
-            }
-        }
-    }
-
-    Ok(())
+    // Запускаем приложение
+    siv.run();
 }
