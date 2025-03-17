@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cursive = "0.20"
-rusqlite = "0.26"
+cursive = { version = "0.21.1", features = ["toml"] }
+
+
+
+
