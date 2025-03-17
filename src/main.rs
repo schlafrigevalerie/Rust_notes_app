@@ -7,10 +7,16 @@ use cursive::style::{Color, ColorStyle};
 use cursive::view::Resizable;
 use cursive::views::Canvas;
 use cursive::Printer;
+use cursive::views::Checkbox;
+
+
 
 fn main() {
+
+    
     let mut siv = cursive::default();
     siv.load_theme_file("theme.toml").unwrap();
+    let checkbox = Checkbox::new().checked().with_name("check");
 
 
     let select = SelectView::<String>::new()
@@ -35,28 +41,37 @@ fn main() {
 }
 
 fn add_name(s: &mut Cursive) {
-    fn ok(s: &mut Cursive, name: &str) {
+    fn ok(s: &mut Cursive, name: &str, checked: bool) {
         s.call_on_name("select", |view: &mut SelectView<String>| {
-            view.add_item_str(name)
+            let task_status = if checked { "[X] " } else { "[ ] " };
+            view.add_item_str(format!("{}{}", task_status, name));
         });
         s.pop_layer();
     }
 
-    s.add_layer(Dialog::around(EditView::new()
-            .on_submit(ok)
-            .with_name("name")
-            .fixed_width(10))
-        .title("Enter a task")
-        .button("Ok", |s| {
-            let name =
-                s.call_on_name("name", |view: &mut EditView| {
-                    view.get_content()
-                }).unwrap();
-            ok(s, &name);
-        })
-        .button("Cancel", |s| {
-            s.pop_layer();
-        }));
+    s.add_layer(Dialog::around(
+        LinearLayout::vertical()
+            .child(EditView::new()
+                .on_submit(move |s, name| {
+                    let checked = s.call_on_name("checkbox", |view: &mut Checkbox| view.is_checked()).unwrap();
+                    ok(s, &name, checked);
+                })
+                .with_name("name")
+                .fixed_width(20))
+            .child(Checkbox::new()
+                .with_name("checkbox"))
+    )
+    .title("Enter a task")
+    .button("Ok", |s| {
+        let name = s.call_on_name("name", |view: &mut EditView| {
+            view.get_content()
+        }).unwrap();
+        let checked = s.call_on_name("checkbox", |view: &mut Checkbox| view.is_checked()).unwrap();
+        ok(s, &name, checked);
+    })
+    .button("Cancel", |s| {
+        s.pop_layer();
+    }));
 }
 
 fn delete_name(s: &mut Cursive) {
@@ -77,45 +92,3 @@ fn on_submit(s: &mut Cursive, name: &str) {
 }
 
 
-
-// Gradient for the front color
-fn front_color(x: u8, y: u8, x_max: u8, y_max: u8) -> Color {
-    // We return a full 24-bits RGB color, but some backends
-    // will project it to a 256-colors palette.
-    Color::Rgb(
-        x * (255 / x_max),
-        y * (255 / y_max),
-        (x + 2 * y) * (255 / (x_max + 2 * y_max)),
-    )
-}
-
-// Gradient for the background color
-fn back_color(x: u8, y: u8, x_max: u8, y_max: u8) -> Color {
-    // Let's try to have a gradient in a different direction than the front color.
-    Color::Rgb(
-        128 + (2 * y_max + x - 2 * y) * (128 / (x_max + 2 * y_max)),
-        255 - y * (255 / y_max),
-        255 - x * (255 / x_max),
-    )
-}
-
-fn draw(_: &(), p: &Printer) {
-    // We use the view size to calibrate the color
-    let x_max = p.size.x as u8;
-    let y_max = p.size.y as u8;
-
-    // Print each cell individually
-    for x in 0..x_max {
-        for y in 0..y_max {
-            // We'll use a different style for each cell
-            let style = ColorStyle::new(
-                front_color(x, y, x_max, y_max),
-                back_color(x, y, x_max, y_max),
-            );
-
-            p.with_color(style, |printer| {
-                printer.print((x, y), "+");
-            });
-        }
-    }
-}
