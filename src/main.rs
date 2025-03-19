@@ -8,12 +8,11 @@ use cursive::view::Resizable;
 use cursive::views::Canvas;
 use cursive::Printer;
 use cursive::views::Checkbox;
+use cursive::views::Panel;
 
 
 
 fn main() {
-
-    
     let mut siv = cursive::default();
     siv.load_theme_file("theme.toml").unwrap();
     let checkbox = Checkbox::new().checked().with_name("check");
@@ -22,23 +21,30 @@ fn main() {
     let select = SelectView::<String>::new()
         .on_submit(on_submit)
         .with_name("select")
-        .fixed_size((10, 5));
-    let buttons = LinearLayout::vertical()
+        .fixed_size((20, 7));
+    
+    let buttons = LinearLayout::horizontal()
+        .child(DummyView) 
         .child(Button::new("Add task", add_name))
-        .child(Button::new("Delete rask", delete_name))
-        .child(DummyView)
-        .child(Button::new("Quit", Cursive::quit));
+        .child(DummyView) 
+        .child(Button::new("Delete task", delete_name))
+        .child(DummyView) 
+        .child(Button::new("Quit", Cursive::quit))
+        .child(DummyView);
 
-    siv.add_layer(Dialog::around(LinearLayout::horizontal()
-            .child(select)
-            .child(DummyView)
-            .child(buttons))
-        .title("To-Do"));
+    let panel = Panel::new(
+        LinearLayout::vertical()
+            .child(select)    
+            .child(DummyView) 
+            .child(buttons)   
+    );
 
+    siv.add_layer(Dialog::around(panel).title("To-Do List"));
 
 
     siv.run();
 }
+
 
 fn add_name(s: &mut Cursive) {
     fn ok(s: &mut Cursive, name: &str, checked: bool) {
@@ -77,7 +83,7 @@ fn add_name(s: &mut Cursive) {
 fn delete_name(s: &mut Cursive) {
     let mut select = s.find_name::<SelectView<String>>("select").unwrap();
     match select.selected_id() {
-        None => s.add_layer(Dialog::info("No name to remove")),
+        None => s.add_layer(Dialog::info("No task to remove")),
         Some(focus) => {
             select.remove_item(focus);
         }
@@ -85,10 +91,23 @@ fn delete_name(s: &mut Cursive) {
 }
 
 fn on_submit(s: &mut Cursive, name: &str) {
-    s.pop_layer();
-    s.add_layer(Dialog::text(format!("Name: {}\nAwesome: yes", name))
+    fn ok(s: &mut Cursive, name: &str) {
+        s.call_on_name("select", |view: &mut SelectView<String>| {
+            view.add_item_str(name)
+        });
+        s.pop_layer();
+    }
+
+    s.add_layer(Dialog::text(format!("Task: {}\nDone: no", name))
         .title(format!("{}'s info", name))
-        .button("Quit", Cursive::quit));
+        .button("Cancel", |s| {
+            s.pop_layer();
+        }));
+    // s.pop_layer();
+    // s.add_layer(Dialog::text(format!("Task: {}\nDone: no", name))
+    //     .title(format!("{}'s info", name))
+    //     .button("Quit", Cursive::quit));
 }
+
 
 
